@@ -1,0 +1,11 @@
+[build]
+  base = "frontend"
+  command = "npm run build"
+  publish = "frontend/dist"
+
+# Single-page app: send all non-file routes to index.html so React Router
+# handles client-side routing instead of Netlify returning 404s.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
