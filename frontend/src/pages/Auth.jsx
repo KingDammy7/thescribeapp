@@ -27,7 +27,7 @@ export default function Auth() {
       if (mode === 'signup') {
         if (!name.trim()) return setError('Name is required');
         await register(name.trim(), email.trim(), password);
-        navigate('/interview');
+        navigate('/voice-profile');
       } else {
         await login(email.trim(), password);
         navigate('/dashboard');

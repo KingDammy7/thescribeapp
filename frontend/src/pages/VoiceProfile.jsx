@@ -20,16 +20,11 @@ export default function VoiceProfile() {
   useEffect(() => { if (!voiceProfile) fetchVoiceProfile(); }, []);
 
   if (!voiceProfile) return (
-    <div style={{ padding: '60px 28px', textAlign: 'center', maxWidth: 640, margin: '0 auto' }} className="page-enter">
-      <div style={{ textAlign: 'left', marginBottom: 8 }}>
-        <Btn variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-          <Icon name="chevronLeft" size={13} /> Back to Dashboard
-        </Btn>
-      </div>
+    <div style={{ padding: '60px 28px', textAlign: 'center', maxWidth: 760, margin: '0 auto' }} className="page-enter">
       <Icon name="mic" size={48} style={{ color: 'var(--gold)', opacity: 0.4, marginBottom: 20 }} />
       <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, color: 'var(--cream)', marginBottom: 10 }}>No Voice Profile Yet</h2>
       <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Pick how you'd like to build your AI fingerprint</p>
-      <VoiceSourceOptions cardStyle />
+      <VoiceSourceOptions cardStyle large />
     </div>
   );
 
