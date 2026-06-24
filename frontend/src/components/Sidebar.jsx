@@ -21,7 +21,7 @@ export default function Sidebar({ onClose }) {
   };
 
   return (
-    <div style={{
+    <aside style={{
       width: 240, minWidth: 240, height: '100%',
       background: 'var(--navy-950)',
       borderRight: '1px solid var(--border)',
@@ -86,6 +86,6 @@ export default function Sidebar({ onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }

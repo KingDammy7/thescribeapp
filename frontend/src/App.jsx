@@ -10,7 +10,9 @@ import AppShell from './components/AppShell';
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
 import VoiceInterview from './pages/VoiceInterview';
+import VoiceFromBooks from './pages/VoiceFromBooks';
 import VoicePreview from './pages/VoicePreview';
+import { PrivacyPolicy, TermsOfService } from './pages/Legal';
 
 // App pages (require auth)
 import Dashboard from './pages/Dashboard';
@@ -55,7 +57,10 @@ export default function App() {
         {/* Public */}
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
         <Route path="/interview" element={<RequireAuth><VoiceInterview /></RequireAuth>} />
+        <Route path="/interview-from-books" element={<RequireAuth><VoiceFromBooks /></RequireAuth>} />
         <Route path="/voice-preview" element={<RequireAuth><VoicePreview /></RequireAuth>} />
 
         {/* App shell with sidebar */}

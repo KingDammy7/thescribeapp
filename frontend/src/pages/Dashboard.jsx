@@ -67,8 +67,11 @@ export default function Dashboard() {
               <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700, marginBottom: 10 }}>STEP 1</div>
               <Icon name="mic" size={26} style={{ color: 'var(--gold)', marginBottom: 12 }} />
               <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 6 }}>Build your voice fingerprint</div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>Answer 8 questions so the AI can write exactly like you.</div>
-              <Btn size="sm" onClick={() => navigate('/interview')}><Icon name="arrowRight" size={12} />Start Interview</Btn>
+              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>Answer 8 questions, or upload books you've already written and let the AI learn your voice from them.</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Btn size="sm" onClick={() => navigate('/interview')}><Icon name="arrowRight" size={12} />Start Interview</Btn>
+                <Btn size="sm" variant="ghost" onClick={() => navigate('/interview-from-books')}><Icon name="upload" size={12} />Upload My Books</Btn>
+              </div>
             </div>
             <div className="glass" style={{ borderRadius: 14, padding: 22, opacity: 0.6 }}>
               <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>STEP 2</div>
@@ -81,7 +84,7 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 30 }}>
+          <div className="dashboard-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 14, marginBottom: 30 }}>
             {stats.map((s, i) => (
               <div key={i} className="glass" style={{ borderRadius: 12, padding: '18px 16px', borderBottom: `2px solid ${s.color}` }}>
                 <div style={{ fontSize: 11, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>{s.label}</div>
@@ -97,7 +100,10 @@ export default function Dashboard() {
                 <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 4 }}>Complete your Voice Interview</div>
                 <div style={{ fontSize: 13, color: 'var(--muted)' }}>Set up your AI voice fingerprint to start generating manuscripts</div>
               </div>
-              <Btn onClick={() => navigate('/interview')}><Icon name="mic" size={14} />Start Interview</Btn>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <Btn onClick={() => navigate('/interview')}><Icon name="mic" size={14} />Start Interview</Btn>
+                <Btn variant="ghost" onClick={() => navigate('/interview-from-books')}><Icon name="upload" size={14} />Upload My Books</Btn>
+              </div>
             </div>
           )}
 

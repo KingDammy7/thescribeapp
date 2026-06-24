@@ -53,6 +53,7 @@ export default function Editor() {
       insertedScriptureRef.current = true;
       const updated = content ? `${content}\n\n${scripture}` : scripture;
       setContent(updated);
+      if (editorRef.current) editorRef.current.innerHTML = updated.replace(/\n/g, '<br/>');
       autoSave(updated, selectedChapter);
       showToast('Scripture added to chapter.', 'success');
       searchParams.delete('insertScripture');
@@ -83,7 +84,12 @@ export default function Editor() {
 
   const wordCount = content.trim() ? content.trim().split(/\s+/).filter(Boolean).length : 0;
   const manuscriptWordCount = activeChapters.reduce((sum, ch) => sum + (ch.id === selectedChapter?.id ? wordCount : (ch.word_count || 0)), 0);
-  const manuscriptGoal = (activeManuscript?.total_chapters || activeChapters.length || 1) * WORDS_PER_CHAPTER_GOAL;
+  // Always derive the goal from the manuscript's own total_chapters (set once at
+  // creation, updated only when an outline is generated) rather than the current
+  // activeChapters.length — that array can briefly hold stale data from a
+  // previously viewed manuscript while this one is still loading, which made the
+  // goal flicker between two different values on reload.
+  const manuscriptGoal = (activeManuscript?.total_chapters || 10) * WORDS_PER_CHAPTER_GOAL;
 
   const autoSave = useCallback(async (text, chapter) => {
     if (!chapter) return;
@@ -102,6 +108,19 @@ export default function Editor() {
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => autoSave(text, selectedChapter), 1500);
   };
+
+  // Sync the contentEditable DOM only when switching to a (different) chapter.
+  // We deliberately do NOT re-set innerHTML on every keystroke (e.g. via
+  // dangerouslySetInnerHTML tied to `content` state) — doing that forces React
+  // to rebuild the DOM node on every render, which resets the browser's cursor
+  // position back to the start of the field. Each newly typed character then
+  // lands at position 0 instead of where you were typing, which is what made
+  // typed text come out reversed.
+  useEffect(() => {
+    if (editorRef.current && selectedChapter) {
+      editorRef.current.innerHTML = (selectedChapter.content || '').replace(/\n/g, '<br/>');
+    }
+  }, [selectedChapter?.id]);
 
   const selectChapter = (ch) => {
     if (selectedChapter) autoSave(content, selectedChapter);
@@ -190,7 +209,7 @@ export default function Editor() {
         <Btn size="sm" onClick={() => navigate(`/generate/${id}`)} style={{ flex: 1, justifyContent: 'center', fontSize: 11 }}>
           <Icon name="zap" size={12} /> Generate
         </Btn>
-        <button onClick={handleExport} title="Export manuscript" style={{ width: 32, borderRadius: 6, border: '1px solid var(--border-bright)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <button onClick={handleExport} title="Export manuscript" aria-label="Download / export manuscript" style={{ width: 32, borderRadius: 6, border: '1px solid var(--border-bright)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon name="download" size={13} />
         </button>
       </div>
@@ -237,7 +256,7 @@ export default function Editor() {
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden', flexDirection: 'column' }}>
       {/* Mobile tab bar */}
       <div className="editor-mobile-tabs" style={{ display: 'none', borderBottom: '1px solid var(--border)', background: 'var(--navy-950)', flexShrink: 0 }}>
-        {[{ k: 'chapters', label: 'Chapters', icon: 'book' }, { k: 'write', label: 'Write', icon: 'pen' }, { k: 'ai', label: 'AI', icon: 'feather' }].map(t => (
+        {[{ k: 'chapters', label: 'Outline', icon: 'book' }, { k: 'write', label: 'Write', icon: 'pen' }, { k: 'ai', label: 'AI', icon: 'feather' }].map(t => (
           <button key={t.k} onClick={() => setMobileTab(t.k)}
             style={{ flex: 1, padding: '12px 8px', background: mobileTab === t.k ? 'rgba(201,164,78,0.1)' : 'transparent', border: 'none', borderBottom: `2px solid ${mobileTab === t.k ? 'var(--gold)' : 'transparent'}`, color: mobileTab === t.k ? 'var(--gold-light)' : 'var(--muted)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12, fontWeight: 600 }}>
             <Icon name={t.icon} size={13} /> {t.label}
@@ -320,15 +339,23 @@ export default function Editor() {
               {selectedChapter ? (
                 <>
                   <div className="divider" style={{ marginBottom: 32 }} />
+                  {wordCount < 5 && (
+                    <div style={{ textAlign: 'center', color: 'var(--muted)', fontSize: 13.5, marginBottom: 28, opacity: 0.75 }}>
+                      <Icon name="feather" size={22} style={{ opacity: 0.4, marginBottom: 10 }} />
+                      <div>Your chapter starts here. Click <strong>Generate</strong> or ask The Scribe to begin writing&hellip;</div>
+                    </div>
+                  )}
                   <div
                     ref={editorRef}
                     contentEditable
                     suppressContentEditableWarning
+                    role="textbox"
+                    aria-multiline="true"
+                    aria-label={`Chapter content — ${selectedChapter.title}`}
                     className="editor-content"
                     data-placeholder="Begin writing here, or ask The Scribe to write for you..."
                     onInput={e => handleContentChange(e.currentTarget.innerText)}
-                    dangerouslySetInnerHTML={{ __html: content.replace(/\n/g, '<br/>') }}
-                    style={{ outline: 'none', lineHeight: 1.9, fontSize: 17, color: 'var(--cream)', caretColor: 'var(--gold)', fontFamily: 'Playfair Display, serif', minHeight: 400 }}
+                    style={{ outline: 'none', lineHeight: 1.9, fontSize: 17, color: 'var(--cream)', caretColor: 'var(--gold)', fontFamily: 'Playfair Display, serif', minHeight: wordCount < 5 ? 160 : 400 }}
                   />
                 </>
               ) : (
@@ -406,16 +433,16 @@ export default function Editor() {
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendAI()}
-                  placeholder="Ask The Scribe... (⌘+Enter to send)"
+                  placeholder="Ask The Scribe... (Enter to send)"
                   className="input-gold"
                   style={{ flex: 1, padding: '9px 12px', borderRadius: 8, fontSize: 13 }}
                 />
-                <button onClick={sendAI} disabled={aiTyping}
+                <button onClick={sendAI} disabled={aiTyping} aria-label="Send message"
                   style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,var(--gold-light),var(--gold))', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, opacity: aiTyping ? 0.6 : 1 }}>
                   <Icon name="send" size={14} style={{ color: 'var(--navy-900)' }} />
                 </button>
               </div>
-              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>⌘+S to save now</div>
+              <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 6, textAlign: 'center' }}>Ctrl/⌘+S to save now</div>
             </div>
           </div>
         )}

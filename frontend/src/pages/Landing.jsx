@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
 import Icon from '../components/Icon';
@@ -12,29 +12,33 @@ const features = [
 ];
 
 export default function Landing() {
-  const navigate = useNavigate();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => { setTimeout(() => setVisible(true), 80); }, []);
 
   return (
-    <div className="bg-hero" style={{ minHeight: '100vh', overflowY: 'auto' }}>
+    <div className="bg-hero" style={{ minHeight: '100vh', overflowY: 'auto', overflowX: 'hidden' }}>
       {/* Nav */}
-      <nav style={{
-        padding: '18px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-        borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)',
-        position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,13,26,0.85)',
-      }}>
-        <Logo />
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <Btn variant="ghost" onClick={() => navigate('/auth')} size="sm">Sign In</Btn>
-          <Btn onClick={() => navigate('/auth?mode=signup')} size="sm">Get Started</Btn>
-        </div>
-      </nav>
+      <header>
+        <nav className="landing-nav" aria-label="Main navigation" style={{
+          padding: '18px 40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          borderBottom: '1px solid var(--border)', backdropFilter: 'blur(12px)',
+          position: 'sticky', top: 0, zIndex: 10, background: 'rgba(6,13,26,0.85)',
+          gap: 10,
+        }}>
+          <Logo to="/" />
+          <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0 }}>
+            <Btn variant="ghost" to="/auth" size="sm" className="landing-nav-signin">Sign In</Btn>
+            <Btn to="/auth?mode=signup" size="sm">Get Started</Btn>
+          </div>
+        </nav>
+      </header>
 
+      <main>
       {/* Hero */}
       <div style={{
-        maxWidth: 920, margin: '0 auto', padding: '90px 24px 70px', textAlign: 'center',
+        maxWidth: 920, margin: '0 auto', padding: '48px 24px 70px', textAlign: 'center',
+        minHeight: 'calc(100vh - 64px)', display: 'flex', flexDirection: 'column', justifyContent: 'center',
         opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(20px)',
         transition: 'opacity 0.8s ease, transform 0.8s ease',
       }}>
@@ -43,21 +47,22 @@ export default function Landing() {
         </div>
         <h1 style={{
           fontFamily: 'Playfair Display, serif',
-          fontSize: 'clamp(40px, 6vw, 72px)',
-          lineHeight: 1.08, marginBottom: 22, color: 'var(--cream)',
+          fontSize: 'clamp(34px, 8vw, 72px)',
+          lineHeight: 1.12, marginBottom: 22, color: 'var(--cream)',
+          overflowWrap: 'break-word',
         }}>
-          Your voice. Your anointing.<br />
+          Your voice. Your anointing.{' '}
           <span className="gold-text">Your manuscript.</span>
         </h1>
-        <p style={{ fontSize: 'clamp(16px,2vw,20px)', color: 'var(--cream-dim)', maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.75 }}>
+        <p style={{ fontSize: 'clamp(15px,2vw,20px)', color: 'var(--cream-dim)', maxWidth: 600, margin: '0 auto 40px', lineHeight: 1.75 }}>
           The Scribe is an AI writing assistant built exclusively for Spirit-filled ministry voices — capturing your theology, phrases, and prophetic style to write full book drafts that sound unmistakably like you.
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <Btn onClick={() => navigate('/auth?mode=signup')} size="lg">
+          <Btn to="/auth?mode=signup" size="lg">
             <Icon name="pen" size={16} /> Begin Your Voice Interview
           </Btn>
-          <Btn variant="ghost" onClick={() => navigate('/auth')} size="lg">
-            <Icon name="eye" size={16} /> Sign In
+          <Btn variant="ghost" to="/auth" size="lg">
+            <Icon name="user" size={16} /> Sign In
           </Btn>
         </div>
 
@@ -82,16 +87,16 @@ export default function Landing() {
       </div>
 
       {/* Features */}
-      <div style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 24px' }}>
+      <section style={{ maxWidth: 1100, margin: '0 auto', padding: '80px 24px' }} aria-labelledby="how-it-works-heading">
         <div style={{ textAlign: 'center', marginBottom: 56 }}>
-          <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(28px,4vw,44px)', color: 'var(--cream)', marginBottom: 10 }}>
+          <h2 id="how-it-works-heading" style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(28px,4vw,44px)', color: 'var(--cream)', marginBottom: 10 }}>
             How The Scribe Works
           </h2>
           <p style={{ color: 'var(--muted)', fontSize: 15 }}>From interview to manuscript in three steps</p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 18 }}>
+        <div className="features-grid">
           {features.map((f, i) => (
-            <div key={i} className="glass glow-ring" style={{ borderRadius: 14, padding: '26px 22px', transition: 'transform 0.2s', cursor: 'default' }}
+            <article key={i} className="glass glow-ring" style={{ borderRadius: 14, padding: '26px 22px', transition: 'transform 0.2s', cursor: 'default' }}
               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
               onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
               <div style={{ width: 42, height: 42, borderRadius: 10, background: 'rgba(201,164,78,0.1)', border: '1px solid var(--border-bright)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 16, color: 'var(--gold)' }}>
@@ -99,15 +104,21 @@ export default function Landing() {
               </div>
               <div style={{ fontFamily: 'Playfair Display, serif', fontSize: 17, fontWeight: 600, color: 'var(--cream)', marginBottom: 8 }}>{f.title}</div>
               <div style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>{f.desc}</div>
-            </div>
+            </article>
           ))}
         </div>
-      </div>
+      </section>
+      </main>
 
       {/* Footer */}
-      <div style={{ borderTop: '1px solid var(--border)', padding: '28px 40px', textAlign: 'center' }}>
-        <div style={{ fontSize: 12, color: 'var(--muted)' }}>© 2025 The Scribe · AI Writing Assistant for Ministry Voices</div>
-      </div>
+      <footer style={{ borderTop: '1px solid var(--border)', padding: '28px 40px', textAlign: 'center' }}>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>© 2025 The Scribe · AI Writing Assistant for Ministry Voices</div>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <Link to="/privacy" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>Privacy Policy</Link>
+          <Link to="/terms" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>Terms of Service</Link>
+          <a href="mailto:contactdamilolaayodele@gmail.com" style={{ fontSize: 12, color: 'var(--muted)', textDecoration: 'none' }}>Contact</a>
+        </div>
+      </footer>
     </div>
   );
 }

@@ -123,9 +123,15 @@ export default function CoverPreview({ style = 'aurora', title = 'Untitled', aut
             fontSize: titleSize,
             color: s.textColor,
             lineHeight: 1.25,
-            wordBreak: 'break-word',
+            overflowWrap: 'break-word',
             marginBottom: width * 0.08,
+            display: '-webkit-box',
+            WebkitLineClamp: width < 100 ? 2 : 3,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
+          title={title}
         >
           {title}
         </div>

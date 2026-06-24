@@ -35,7 +35,10 @@ ${profile.theology || 'Spirit-filled, apostolic theology with prophetic emphasis
 
 WRITING STYLE:
 ${profile.style || 'Prophetic poetry blended with declarative teaching'}
-
+${profile.sample_passage ? `
+APPROVED VOICE SAMPLE (the author picked and edited this themselves — treat it as the single most reliable anchor for exactly how they sound; match its rhythm, sentence length, and word choice closely):
+"${profile.sample_passage}"
+` : ''}
 ═══ VOICE RULES (NON-NEGOTIABLE) ═══
 
 1. SOUND LIKE ${name.toUpperCase()} — Every sentence should be unmistakably theirs

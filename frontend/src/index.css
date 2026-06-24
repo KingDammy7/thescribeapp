@@ -302,6 +302,15 @@ body {
   .editor-mobile-tabs { display: flex !important; }
   .editor-mobile-panel { display: none !important; }
   .editor-mobile-panel.active { display: flex !important; }
+  /* The chapter list and AI panel both use a fixed desktop pixel width
+     (200px / 310px) inline. On phones narrower than that, the panel itself
+     overflows the viewport, which clips whatever is pinned to its right
+     edge (e.g. the AI quick-action chips) instead of letting them wrap. */
+  .editor-mobile-panel.active {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+  }
 }
 
 /* Toggle switch (theme) */
@@ -316,3 +325,37 @@ body {
   transition: transform 0.2s;
 }
 .theme-toggle.on .knob { transform: translateX(19px); }
+
+/* Landing nav — on very small screens, let the button group wrap onto its
+   own centered row below the logo instead of clipping off the right edge.
+   Both Sign In and Get Started stay visible and reachable. */
+@media (max-width: 480px) {
+  .landing-nav {
+    padding: 14px 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 10px;
+  }
+}
+
+/* "How The Scribe Works" feature grid — explicit 4-up at desktop so a
+   non-multiple-of-3 card count never strands an orphaned, left-aligned
+   card on its own row the way auto-fit can. Steps down cleanly through
+   tablet and mobile. */
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+@media (max-width: 980px) {
+  .features-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .features-grid { grid-template-columns: 1fr; }
+}
+
+/* Dashboard stat cards — compact 2-column grid on mobile instead of a
+   single full-width column, to cut down on scroll before real content. */
+@media (max-width: 520px) {
+  .dashboard-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+}

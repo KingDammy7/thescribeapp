@@ -1,10 +1,27 @@
 const express = require('express');
+const multer = require('multer');
 const Anthropic = require('@anthropic-ai/sdk');
 const db = require('../utils/db');
 const auth = require('../middleware/auth');
 const { buildVoiceSystemPrompt, buildOutlinePrompt, buildScriptureSuggestionPrompt } = require('../utils/voicePromptBuilder');
+const { extractText, sampleExcerpt } = require('../utils/extractBookText');
 
 const router = express.Router();
+
+// Memory storage — files are small enough (manuscripts, not media) to hold
+// in RAM just long enough to extract their text, then they're discarded.
+const ALLOWED_BOOK_EXTENSIONS = ['.pdf', '.docx', '.txt', '.md'];
+const bookUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 30 * 1024 * 1024, files: 10 },
+  fileFilter: (req, file, cb) => {
+    const ext = '.' + (file.originalname.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_BOOK_EXTENSIONS.includes(ext)) {
+      return cb(new Error(`Unsupported file type "${ext}". Please upload PDF, DOCX, TXT, or MD files.`));
+    }
+    cb(null, true);
+  },
+});
 
 function getAnthropic() {
   if (!process.env.ANTHROPIC_API_KEY) throw new Error('ANTHROPIC_API_KEY not set in .env');
@@ -65,6 +82,119 @@ Do not explain what you're doing, just write the paragraph.`;
     res.write(`data: ${JSON.stringify({ error: e.message })}\n\n`);
     res.end();
   }
+});
+
+// ─── VOICE SAMPLES (multiple variations to choose from) ──────────────
+// Generates 3 distinct voice samples in parallel so the author can pick
+// the one that feels most like them, then edit it before saving it as
+// their anchor "sample_passage" — a reference the AI can lean on for
+// every future generation (chapter, chat, rewrite).
+const VOICE_SAMPLE_ANGLES = [
+  { id: 'declarative', label: 'Bold & Declarative', instruction: 'Lead with prophetic authority and urgency — short, punchy declarations that hit like a sermon opener.' },
+  { id: 'narrative', label: 'Personal & Narrative', instruction: 'Ground it in personal testimony and warmth — tell it the way you would share a defining story from the pulpit.' },
+  { id: 'teaching', label: 'Teaching & Instructional', instruction: 'Lean into clear, structured teaching authority — the way you would open a message meant to equip and instruct.' },
+];
+
+router.post('/voice-samples', auth, async (req, res) => {
+  try {
+    const profile = getVoiceProfile(req.user.id, req.user.name);
+    const anthropic = getAnthropic();
+    const systemPrompt = buildVoiceSystemPrompt(profile);
+
+    const samples = await Promise.all(VOICE_SAMPLE_ANGLES.map(async (angle) => {
+      const userPrompt = `Write a powerful opening paragraph for a ministry book in ${profile.name || req.user.name}'s voice.
+Make it 120-170 words. ${angle.instruction}
+Do not explain what you're doing, just write the paragraph.`;
+
+      const response = await anthropic.messages.create({
+        model: process.env.CLAUDE_MODEL || 'claude-opus-4-5',
+        max_tokens: 600,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userPrompt }],
+      });
+
+      return { id: angle.id, label: angle.label, text: response.content[0].text.trim() };
+    }));
+
+    res.json({ samples });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ─── VOICE FROM BOOKS ────────────────────────────────────────────────
+// The author uploads 1-10 of their own books/manuscripts (PDF/DOCX/TXT/MD).
+// We extract text, sample it, and ask Claude to reverse-engineer their
+// voice profile from real evidence instead of self-reported answers.
+// This does NOT save anything — it returns a draft the author reviews
+// and edits on the frontend before it's saved to their profile, same as
+// the multi-sample voice picker.
+router.post('/voice-from-books', auth, (req, res) => {
+  bookUpload.array('books', 10)(req, res, async (multerErr) => {
+    if (multerErr) {
+      return res.status(400).json({ error: multerErr.message || 'Could not process those files.' });
+    }
+    try {
+      const files = req.files || [];
+      if (!files.length) {
+        return res.status(400).json({ error: 'Please upload at least one book or manuscript file.' });
+      }
+
+      const excerpts = [];
+      for (const file of files) {
+        try {
+          const raw = await extractText(file);
+          const cleaned = (raw || '').replace(/\s+/g, ' ').trim();
+          if (cleaned.length < 300) continue; // too short to learn anything from — skip silently
+          excerpts.push({ filename: file.originalname, text: sampleExcerpt(cleaned, 9000) });
+        } catch {
+          continue; // one unreadable file shouldn't fail the whole batch
+        }
+      }
+
+      if (!excerpts.length) {
+        return res.status(400).json({ error: "We couldn't read text from any of those files. Please upload PDF, DOCX, TXT, or MD files of your own writing." });
+      }
+
+      const anthropic = getAnthropic();
+      const booksBlock = excerpts.map((e, i) => `--- BOOK ${i + 1}: "${e.filename}" ---\n${e.text}`).join('\n\n');
+      const authorName = req.user.name || 'the author';
+
+      const prompt = `You are a literary voice analyst. Below are excerpts from ${excerpts.length} book(s)/manuscript(s) written by ${authorName}. Study them closely and reverse-engineer this author's unique writing voice and ministry identity from real evidence — do not guess generically.
+
+${booksBlock}
+
+Return ONLY a JSON object with these exact string fields, based strictly on what you read above:
+{
+  "ministry": "Their ministry identity and calling, inferred from how they write and what they emphasize",
+  "tone": "Their preaching/writing tone (bold, pastoral, fiery, etc.) — be specific about the texture of their actual sentences",
+  "phrases": "3-6 signature phrases or expressions they actually repeat across these excerpts, comma-separated, no quotation marks",
+  "scriptures": "3-5 scripture references they actually cite or allude to in these excerpts, comma-separated",
+  "stories": "One defining personal story, testimony, or illustration found in these excerpts, summarized in their own voice",
+  "audience": "Who they are clearly writing for, based on the language and assumptions in the text",
+  "theology": "Their theological framework and convictions, as evidenced by the text",
+  "style": "Their writing style (poetic, academic, narrative, declarative, etc.)",
+  "sample_passage": "A 120-170 word passage you write yourself in their exact voice, suitable as an anchor sample for a new chapter opening — don't just copy text verbatim from the excerpts"
+}
+
+Return ONLY the JSON object — no explanation, no markdown code fences.`;
+
+      const response = await anthropic.messages.create({
+        model: process.env.CLAUDE_MODEL || 'claude-opus-4-5',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const text = response.content[0].text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not analyze your books right now. Please try again.');
+      const profile = JSON.parse(jsonMatch[0]);
+
+      res.json({ profile, filesAnalyzed: excerpts.map(e => e.filename) });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 });
 
 // ─── CHAPTER GENERATION ─────────────────────────────────────────────

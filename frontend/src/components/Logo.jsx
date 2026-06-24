@@ -1,12 +1,16 @@
+import { Link } from 'react-router-dom';
 import Icon from './Icon';
+import useStore from '../store/useStore';
 
-export default function Logo({ size = 'md' }) {
+export default function Logo({ size = 'md', to }) {
+  const { user } = useStore();
   const iconSize = size === 'sm' ? 14 : 18;
   const boxSize = size === 'sm' ? 28 : 36;
   const titleSize = size === 'sm' ? 16 : 20;
+  const destination = to || (user ? '/dashboard' : '/');
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: size === 'sm' ? 8 : 12 }}>
+    <Link to={destination} aria-label="The Scribe — go to home" style={{ display: 'flex', alignItems: 'center', gap: size === 'sm' ? 8 : 12, textDecoration: 'none' }}>
       <div style={{
         width: boxSize, height: boxSize,
         background: 'linear-gradient(135deg, var(--gold-light), var(--gold-dim))',
@@ -35,6 +39,6 @@ export default function Logo({ size = 'md' }) {
           </div>
         )}
       </div>
-    </div>
+    </Link>
   );
 }

@@ -56,7 +56,7 @@ export default function Manuscripts() {
   };
 
   return (
-    <div style={{ padding: '32px 28px', maxWidth: 1000, margin: '0 auto' }} className="page-enter">
+    <div style={{ padding: '32px 28px', maxWidth: 1000, margin: '0 auto', overflowX: 'hidden' }} className="page-enter">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 28 }}>
         <div>
           <div className="tag tag-gold" style={{ marginBottom: 10 }}>Manuscripts</div>
@@ -72,7 +72,7 @@ export default function Manuscripts() {
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by title or type..."
             className="input-gold" style={{ padding: '10px 14px 10px 38px', borderRadius: 9, fontSize: 13.5 }} />
         </div>
-        <div style={{ display: 'flex', gap: 6 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}>
           {statusFilters.map(f => (
             <button key={f.key} onClick={() => setStatusKey(f.key)}
               style={{ padding: '8px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${statusKey === f.key ? 'var(--gold)' : 'var(--border-bright)'}`, background: statusKey === f.key ? 'rgba(201,164,78,0.12)' : 'transparent', color: statusKey === f.key ? 'var(--gold-light)' : 'var(--muted)' }}>
@@ -102,12 +102,12 @@ export default function Manuscripts() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {filtered.map(m => (
             <div key={m.id} className="glass" onClick={() => navigate(`/editor/${m.id}`)}
-              style={{ borderRadius: 14, padding: '22px 20px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)' }}
+              style={{ borderRadius: 14, padding: '22px 20px', cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-bright)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12, minWidth: 0 }}>
                 <CoverPreview style={m.cover_style || 'aurora'} title={m.title} author={user?.name || ''} type={m.type} width={56} />
-                <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, maxWidth: '100%' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
                     <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, color: 'var(--cream)', fontWeight: 600, margin: 0 }}>{m.title}</h3>
                     <span className={`tag ${deriveStatus(m) === 'complete' ? 'tag-green' : deriveStatus(m) === 'in_progress' ? 'tag-blue' : 'tag-gold'}`}>
@@ -125,7 +125,7 @@ export default function Manuscripts() {
                     <span style={{ fontSize: 12, color: 'var(--gold)', fontWeight: 600 }}>{m.progress || 0}%</span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                <div style={{ display: 'flex', gap: 8, flexShrink: 0, flexWrap: 'wrap' }}>
                   <Btn variant="ghost" size="sm" onClick={e => { e.stopPropagation(); navigate(`/generate/${m.id}`); }}>
                     <Icon name="zap" size={13} /> Generate
                   </Btn>

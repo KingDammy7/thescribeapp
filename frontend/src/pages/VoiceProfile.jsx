@@ -21,7 +21,10 @@ export default function VoiceProfile() {
       <Icon name="mic" size={48} style={{ color: 'var(--gold)', opacity: 0.4, marginBottom: 20 }} />
       <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, color: 'var(--cream)', marginBottom: 10 }}>No Voice Profile Yet</h2>
       <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Complete the voice interview to build your AI fingerprint</p>
-      <Btn onClick={() => navigate('/interview')} size="lg"><Icon name="mic" size={16} />Start Voice Interview</Btn>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <Btn onClick={() => navigate('/interview')} size="lg"><Icon name="mic" size={16} />Start Voice Interview</Btn>
+        <Btn onClick={() => navigate('/interview-from-books')} size="lg" variant="ghost"><Icon name="upload" size={16} />Upload My Books Instead</Btn>
+      </div>
     </div>
   );
 
@@ -144,6 +147,46 @@ export default function VoiceProfile() {
             )}
           </div>
         ))}
+      </div>
+
+      {/* Approved voice sample — the anchor passage picked & edited on the
+          Voice Preview screen. Shown full-width since it's usually a full
+          paragraph. Editable here too, and re-generatable from scratch. */}
+      <div className="glass" style={{ borderRadius: 14, padding: '22px', marginTop: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--gold)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 600 }}>Approved Voice Sample</div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {editingKey !== 'sample_passage' && p.sample_passage && (
+              <button onClick={() => startEdit('sample_passage', p.sample_passage)} title="Edit" style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
+                <Icon name="edit" size={13} />
+              </button>
+            )}
+            <Btn size="sm" variant="ghost" onClick={() => navigate('/voice-preview')}>
+              <Icon name="refresh" size={13} /> {p.sample_passage ? 'Generate New Options' : 'Generate a Sample'}
+            </Btn>
+          </div>
+        </div>
+        {editingKey === 'sample_passage' ? (
+          <div>
+            <textarea
+              value={draft}
+              onChange={e => setDraft(e.target.value)}
+              className="input-gold"
+              rows={7}
+              style={{ width: '100%', padding: '10px 12px', borderRadius: 8, fontSize: 13.5, lineHeight: 1.6, resize: 'vertical', marginBottom: 10, fontFamily: 'Playfair Display, serif', fontStyle: 'italic' }}
+            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Btn size="sm" onClick={() => saveEdit('sample_passage')} disabled={savingKey === 'sample_passage'}>
+                {savingKey === 'sample_passage' ? 'Saving...' : 'Save'}
+              </Btn>
+              <Btn size="sm" variant="ghost" onClick={cancelEdit}>Cancel</Btn>
+            </div>
+          </div>
+        ) : p.sample_passage ? (
+          <p style={{ fontSize: 14, color: 'var(--cream-dim)', lineHeight: 1.7, fontFamily: 'Playfair Display, serif', fontStyle: 'italic' }}>"{p.sample_passage}"</p>
+        ) : (
+          <p style={{ fontSize: 13, color: 'var(--muted)' }}>No approved sample yet. Generate a few options and pick the one that sounds most like you — The Scribe will use it as a reference for everything it writes.</p>
+        )}
       </div>
     </div>
   );

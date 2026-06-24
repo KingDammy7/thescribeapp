@@ -60,7 +60,7 @@ export default function AppShell() {
       {/* Main Content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
         {/* Mobile / tablet header with hamburger */}
-        <div
+        <header
           className="mobile-header"
           style={{
             padding: '12px 16px',
@@ -79,12 +79,12 @@ export default function AppShell() {
           </button>
           <Logo size="sm" />
           <div style={{ width: 30 }} />
-        </div>
+        </header>
 
         {/* Page Content */}
-        <div style={{ flex: 1, overflowY: 'auto' }}>
+        <main style={{ flex: 1, overflowY: 'auto' }}>
           <Outlet />
-        </div>
+        </main>
       </div>
     </div>
   );
