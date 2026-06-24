@@ -33,7 +33,12 @@ export default function Auth() {
         navigate('/dashboard');
       }
     } catch (err) {
-      setError(err.response?.data?.error || 'Something went wrong');
+      const serverMsg = err.response?.data?.error || '';
+      if (mode === 'signup' && /already registered|already exists|already in use/i.test(serverMsg)) {
+        setError('That email is already registered. Please sign in instead.');
+      } else {
+        setError(serverMsg || 'Something went wrong');
+      }
     }
   };
 

@@ -9,18 +9,28 @@ const useStore = create((set, get) => ({
 
   login: async (email, password) => {
     set({ authLoading: true });
-    const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('scribe_token', data.token);
-    set({ user: data.user, token: data.token, authLoading: false });
-    return data;
+    try {
+      const { data } = await api.post('/auth/login', { email, password });
+      localStorage.setItem('scribe_token', data.token);
+      set({ user: data.user, token: data.token, authLoading: false });
+      return data;
+    } catch (e) {
+      set({ authLoading: false });
+      throw e;
+    }
   },
 
   register: async (name, email, password) => {
     set({ authLoading: true });
-    const { data } = await api.post('/auth/register', { name, email, password });
-    localStorage.setItem('scribe_token', data.token);
-    set({ user: data.user, token: data.token, authLoading: false });
-    return data;
+    try {
+      const { data } = await api.post('/auth/register', { name, email, password });
+      localStorage.setItem('scribe_token', data.token);
+      set({ user: data.user, token: data.token, authLoading: false });
+      return data;
+    } catch (e) {
+      set({ authLoading: false });
+      throw e;
+    }
   },
 
   logout: () => {
