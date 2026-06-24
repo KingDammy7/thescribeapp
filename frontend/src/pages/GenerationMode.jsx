@@ -4,8 +4,10 @@ import Btn from '../components/Btn';
 import Icon from '../components/Icon';
 import useStore from '../store/useStore';
 import { streamRequest } from '../lib/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function GenerationMode() {
+  useDocumentTitle('Generate');
   const { id } = useParams();
   const navigate = useNavigate();
   const { activeManuscript, activeChapters, fetchManuscript, updateChapter } = useStore();

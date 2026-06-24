@@ -42,6 +42,27 @@ const useStore = create((set, get) => ({
     return data.user;
   },
 
+  forgotPassword: async (email) => {
+    const { data } = await api.post('/auth/forgot-password', { email });
+    return data;
+  },
+
+  resetPassword: async (token, password) => {
+    const { data } = await api.post('/auth/reset-password', { token, password });
+    return data;
+  },
+
+  verifyEmailToken: async (token) => {
+    const { data } = await api.post('/auth/verify-email', { token });
+    set(s => ({ user: s.user ? { ...s.user, verified: true } : s.user }));
+    return data;
+  },
+
+  resendVerification: async () => {
+    const { data } = await api.post('/auth/resend-verification');
+    return data;
+  },
+
   // ─── VOICE PROFILE ────────────────────────────────────────────────
   voiceProfile: null,
 
@@ -137,7 +158,13 @@ const useStore = create((set, get) => ({
     // Optimistic reorder in UI
     set(s => {
       const map = new Map(s.activeChapters.map(c => [c.id, c]));
-      const reordered = orderedIds.map((id, i) => ({ ...map.get(id), chapter_number: map.get(id)?.chapter_number === 0 ? 0 : i + 1 }));
+      let mainIdx = 1;
+      const reordered = orderedIds.map((id) => {
+        const ch = map.get(id);
+        const n = ch?.chapter_number;
+        const chapter_number = n === 0 ? 0 : n === 999 ? 999 : mainIdx++;
+        return { ...ch, chapter_number };
+      });
       return { activeChapters: reordered };
     });
     try {

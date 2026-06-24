@@ -4,8 +4,10 @@ import Btn from '../components/Btn';
 import Icon from '../components/Icon';
 import useStore from '../store/useStore';
 import { friendlyError } from '../lib/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Settings() {
+  useDocumentTitle('Settings');
   const { user, updateProfile, logout, theme, toggleTheme, showToast } = useStore();
   const navigate = useNavigate();
   const [name, setName] = useState(user?.name || '');

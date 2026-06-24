@@ -9,8 +9,13 @@ import AppShell from './components/AppShell';
 // Public pages
 import Landing from './pages/Landing';
 import Auth from './pages/Auth';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import VoiceInterview from './pages/VoiceInterview';
 import VoiceFromBooks from './pages/VoiceFromBooks';
+import VoiceFromNotes from './pages/VoiceFromNotes';
+import VoiceFromAudio from './pages/VoiceFromAudio';
 import VoicePreview from './pages/VoicePreview';
 import { PrivacyPolicy, TermsOfService } from './pages/Legal';
 
@@ -57,10 +62,15 @@ export default function App() {
         {/* Public */}
         <Route path="/" element={<Landing />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/verify-email" element={<VerifyEmail />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/interview" element={<RequireAuth><VoiceInterview /></RequireAuth>} />
         <Route path="/interview-from-books" element={<RequireAuth><VoiceFromBooks /></RequireAuth>} />
+        <Route path="/interview-from-notes" element={<RequireAuth><VoiceFromNotes /></RequireAuth>} />
+        <Route path="/interview-from-audio" element={<RequireAuth><VoiceFromAudio /></RequireAuth>} />
         <Route path="/voice-preview" element={<RequireAuth><VoicePreview /></RequireAuth>} />
 
         {/* App shell with sidebar */}

@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Btn from '../components/Btn';
 import Icon from '../components/Icon';
+import VoiceSourceOptions from '../components/VoiceSourceOptions';
 import useStore from '../store/useStore';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 // Strip any leading/trailing quote characters the user may have typed during the interview
 const stripQuotes = (s) => s.replace(/^["'“‘]+/, '').replace(/["'”’]+$/, '').trim();
 
 export default function VoiceProfile() {
+  useDocumentTitle('My Voice Profile');
   const { user, voiceProfile, fetchVoiceProfile, updateVoiceProfile, showToast } = useStore();
   const navigate = useNavigate();
   const [editingKey, setEditingKey] = useState(null);
@@ -17,14 +20,16 @@ export default function VoiceProfile() {
   useEffect(() => { if (!voiceProfile) fetchVoiceProfile(); }, []);
 
   if (!voiceProfile) return (
-    <div style={{ padding: '60px 28px', textAlign: 'center', maxWidth: 500, margin: '0 auto' }} className="page-enter">
+    <div style={{ padding: '60px 28px', textAlign: 'center', maxWidth: 640, margin: '0 auto' }} className="page-enter">
+      <div style={{ textAlign: 'left', marginBottom: 8 }}>
+        <Btn variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
+          <Icon name="chevronLeft" size={13} /> Back to Dashboard
+        </Btn>
+      </div>
       <Icon name="mic" size={48} style={{ color: 'var(--gold)', opacity: 0.4, marginBottom: 20 }} />
       <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, color: 'var(--cream)', marginBottom: 10 }}>No Voice Profile Yet</h2>
-      <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Complete the voice interview to build your AI fingerprint</p>
-      <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
-        <Btn onClick={() => navigate('/interview')} size="lg"><Icon name="mic" size={16} />Start Voice Interview</Btn>
-        <Btn onClick={() => navigate('/interview-from-books')} size="lg" variant="ghost"><Icon name="upload" size={16} />Upload My Books Instead</Btn>
-      </div>
+      <p style={{ color: 'var(--muted)', marginBottom: 28 }}>Pick how you'd like to build your AI fingerprint</p>
+      <VoiceSourceOptions cardStyle />
     </div>
   );
 

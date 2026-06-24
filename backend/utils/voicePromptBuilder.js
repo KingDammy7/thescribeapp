@@ -64,26 +64,29 @@ Write now as ${name}. Every word must sound like them.`;
  * Builds a prompt for outline generation
  */
 function buildOutlinePrompt(profile, manuscript) {
+  const mainCount = manuscript.total_chapters || 10;
   return `You are helping ${profile.name || 'the author'} structure their book: "${manuscript.title}".
 
 Type: ${manuscript.type || 'Ministry Book'}
 Purpose: ${manuscript.purpose || 'To equip and activate ministry leaders'}
 Target Audience: ${profile.audience || 'Spirit-filled believers'}
 Theological Framework: ${profile.theology || 'Apostolic, prophetic'}
-Total Chapters: ${manuscript.total_chapters || 10}
+Main Chapters Requested: ${mainCount}
 
 Generate a compelling chapter-by-chapter outline that:
 1. Flows with prophetic progression — each chapter builds on the last
 2. Reflects ${profile.name || 'the author'}'s theological convictions
 3. Addresses their specific audience's needs and questions
-4. Includes an introduction and conclusion as part of the count
+4. Contains EXACTLY ${mainCount} main numbered chapters (numbered 1 through ${mainCount}) — plus ONE separate Introduction and ONE separate Conclusion. The Introduction and Conclusion are ADDITIONAL to the ${mainCount} main chapters, not counted within them.
 5. Chapter titles should sound like sermon titles — not academic headings
 
-Return ONLY a JSON array like this (no explanation, just JSON):
+Return ONLY a JSON array with exactly ${mainCount + 2} items total, structured like this (no explanation, just JSON):
 [
   {"number": 0, "title": "Introduction: [Title]", "description": "Brief description of what this chapter covers"},
   {"number": 1, "title": "[Chapter Title]", "description": "Brief description"},
   ...
+  {"number": ${mainCount}, "title": "[Final main chapter title]", "description": "Brief description"},
+  {"number": 999, "title": "Conclusion: [Title]", "description": "Brief description"}
 ]`;
 }
 

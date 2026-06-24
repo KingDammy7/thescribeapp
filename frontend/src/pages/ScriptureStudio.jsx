@@ -4,6 +4,7 @@ import Btn from '../components/Btn';
 import Icon from '../components/Icon';
 import useStore from '../store/useStore';
 import { streamRequest } from '../lib/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const defaultScriptures = [
   { reference: 'Isaiah 60:1', text: '"Arise, shine; for your light has come! And the glory of the LORD is risen upon you."', theme: 'Prophetic Awakening', tags: ['light', 'glory', 'awakening', 'arise', 'prophetic'] },
@@ -66,6 +67,7 @@ const defaultScriptures = [
 ];
 
 export default function ScriptureStudio() {
+  useDocumentTitle('Scripture Studio');
   const { voiceProfile, manuscripts, fetchManuscripts, showToast } = useStore();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');

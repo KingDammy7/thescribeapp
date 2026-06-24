@@ -5,11 +5,13 @@ import Icon from '../components/Icon';
 import CoverPreview, { coverStyles } from '../components/CoverPreview';
 import useStore from '../store/useStore';
 import api, { friendlyError } from '../lib/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const bookTypes = ['Teaching Book', 'Devotional', 'Autobiography / Memoir', 'Prophetic Manual', 'Prayer & Intercession', 'Leadership & Ministry'];
 const chapterCounts = ['6', '8', '10', '12', '15', '20'];
 
 export default function NewManuscript() {
+  useDocumentTitle('New Manuscript');
   const [title, setTitle] = useState('');
   const [type, setType] = useState('');
   const [purpose, setPurpose] = useState('');
@@ -98,7 +100,8 @@ export default function NewManuscript() {
 
         {/* Chapter count */}
         <div>
-          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--cream-dim)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Number of Chapters</label>
+          <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--cream-dim)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Number of Chapters</label>
+          <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 10 }}>This is asides Introduction and Conclusion — those are added automatically.</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             {chapterCounts.map(n => (
               <button key={n} onClick={() => setChapters(n)}
@@ -172,7 +175,7 @@ export default function NewManuscript() {
               {outline.map((ch, i) => (
                 <div key={i} style={{ display: 'flex', gap: 12, padding: '9px 0', borderBottom: i < outline.length - 1 ? '1px solid var(--border)' : 'none' }}>
                   <span style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700, minWidth: 22, paddingTop: 2 }}>
-                    {ch.number === 0 ? '—' : String(ch.number).padStart(2, '0')}
+                    {ch.number === 0 ? 'INTRO' : ch.number === 999 ? 'CONCL' : String(ch.number).padStart(2, '0')}
                   </span>
                   <div>
                     <div style={{ fontSize: 14, color: 'var(--cream)', fontWeight: 600 }}>{ch.title}</div>

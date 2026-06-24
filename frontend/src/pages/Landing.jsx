@@ -67,7 +67,7 @@ export default function Landing() {
         </div>
 
         {/* Sample output */}
-        <div className="glass" style={{ marginTop: 64, borderRadius: 18, padding: '32px 36px', maxWidth: 680, margin: '64px auto 0', textAlign: 'left' }}>
+        <div className="glass landing-sample-card" style={{ borderRadius: 18, padding: '32px 36px', maxWidth: 680, margin: '64px auto 0', textAlign: 'left' }}>
           <div style={{ fontSize: 11, color: 'var(--gold)', letterSpacing: 2, textTransform: 'uppercase', fontWeight: 600, marginBottom: 16 }}>
             ✦ Generated in your voice
           </div>

@@ -5,6 +5,7 @@ import Icon from '../components/Icon';
 import CoverPreview from '../components/CoverPreview';
 import ConfirmModal from '../components/ConfirmModal';
 import useStore from '../store/useStore';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const statusFilters = [
   { key: 'all', label: 'All' },
@@ -20,6 +21,7 @@ function deriveStatus(m) {
 }
 
 export default function Manuscripts() {
+  useDocumentTitle('My Manuscripts');
   const { manuscripts, fetchManuscripts, manuscriptsLoading, deleteManuscript, showToast, user } = useStore();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
@@ -72,13 +74,16 @@ export default function Manuscripts() {
           <input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by title or type..."
             className="input-gold" style={{ padding: '10px 14px 10px 38px', borderRadius: 9, fontSize: 13.5 }} />
         </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', overflowX: 'auto', WebkitOverflowScrolling: 'touch', maxWidth: '100%' }}>
-          {statusFilters.map(f => (
-            <button key={f.key} onClick={() => setStatusKey(f.key)}
-              style={{ padding: '8px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', border: `1px solid ${statusKey === f.key ? 'var(--gold)' : 'var(--border-bright)'}`, background: statusKey === f.key ? 'rgba(201,164,78,0.12)' : 'transparent', color: statusKey === f.key ? 'var(--gold-light)' : 'var(--muted)' }}>
-              {f.label}
-            </button>
-          ))}
+        <div className="filter-chip-strip" style={{ position: 'relative', maxWidth: '100%' }}>
+          <div className="filter-chip-scroll" style={{ display: 'flex', gap: 6, overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            {statusFilters.map(f => (
+              <button key={f.key} onClick={() => setStatusKey(f.key)}
+                style={{ padding: '8px 14px', borderRadius: 8, fontSize: 12.5, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0, border: `1px solid ${statusKey === f.key ? 'var(--gold)' : 'var(--border-bright)'}`, background: statusKey === f.key ? 'rgba(201,164,78,0.12)' : 'transparent', color: statusKey === f.key ? 'var(--gold-light)' : 'var(--muted)' }}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+          <div className="filter-chip-fade" aria-hidden="true" />
         </div>
       </div>
 

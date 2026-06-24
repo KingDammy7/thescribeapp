@@ -5,6 +5,7 @@ import Icon from '../components/Icon';
 import CoverPreview, { coverStyles } from '../components/CoverPreview';
 import useStore from '../store/useStore';
 import { streamRequest } from '../lib/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const WORDS_PER_CHAPTER_GOAL = 800;
 
@@ -13,6 +14,7 @@ export default function Editor() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeManuscript, activeChapters, fetchManuscript, updateChapter, updateManuscript, generateOutlineForManuscript, reorderChapters, exportManuscript, showToast, user } = useStore();
+  useDocumentTitle(activeManuscript ? `Editing: ${activeManuscript.title}` : 'Editor');
   const [coverPickerOpen, setCoverPickerOpen] = useState(false);
 
   const [selectedChapter, setSelectedChapter] = useState(null);
@@ -283,7 +285,7 @@ export default function Editor() {
                   <Icon name="layers" size={11} style={{ opacity: 0.4, cursor: 'grab', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontSize: 10, fontWeight: 700, opacity: 0.6, marginBottom: 2 }}>
-                      {ch.chapter_number === 0 ? 'INTRO' : `CH ${ch.chapter_number}`}
+                      {ch.chapter_number === 0 ? 'INTRO' : ch.chapter_number === 999 ? 'CONCL' : `CH ${ch.chapter_number}`}
                     </div>
                     <div style={{ fontSize: 12, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ch.title}</div>
                     {ch.status === 'complete' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981', marginTop: 4 }} />}

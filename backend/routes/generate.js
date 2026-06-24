@@ -5,6 +5,7 @@ const db = require('../utils/db');
 const auth = require('../middleware/auth');
 const { buildVoiceSystemPrompt, buildOutlinePrompt, buildScriptureSuggestionPrompt } = require('../utils/voicePromptBuilder');
 const { extractText, sampleExcerpt } = require('../utils/extractBookText');
+const { transcribeAudioBuffer } = require('../utils/transcribe');
 
 const router = express.Router();
 
@@ -18,6 +19,19 @@ const bookUpload = multer({
     const ext = '.' + (file.originalname.split('.').pop() || '').toLowerCase();
     if (!ALLOWED_BOOK_EXTENSIONS.includes(ext)) {
       return cb(new Error(`Unsupported file type "${ext}". Please upload PDF, DOCX, TXT, or MD files.`));
+    }
+    cb(null, true);
+  },
+});
+
+const ALLOWED_AUDIO_EXTENSIONS = ['.mp3', '.wav', '.m4a', '.mp4', '.webm', '.ogg', '.aac'];
+const audioUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 60 * 1024 * 1024, files: 1 },
+  fileFilter: (req, file, cb) => {
+    const ext = '.' + (file.originalname.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_AUDIO_EXTENSIONS.includes(ext)) {
+      return cb(new Error(`Unsupported audio type "${ext}". Please upload MP3, WAV, M4A, MP4, WEBM, OGG, or AAC.`));
     }
     cb(null, true);
   },
@@ -136,8 +150,10 @@ router.post('/voice-from-books', auth, (req, res) => {
     }
     try {
       const files = req.files || [];
-      if (!files.length) {
-        return res.status(400).json({ error: 'Please upload at least one book or manuscript file.' });
+      const pastedNotes = (req.body.notes || '').replace(/\s+/g, ' ').trim();
+
+      if (!files.length && !pastedNotes) {
+        return res.status(400).json({ error: 'Please upload a book/manuscript file or paste a sermon note or teaching to analyze.' });
       }
 
       const excerpts = [];
@@ -152,15 +168,21 @@ router.post('/voice-from-books', auth, (req, res) => {
         }
       }
 
+      if (pastedNotes.length >= 300) {
+        excerpts.push({ filename: 'Pasted Sermon Note / Teaching', text: sampleExcerpt(pastedNotes, 9000) });
+      }
+
       if (!excerpts.length) {
-        return res.status(400).json({ error: "We couldn't read text from any of those files. Please upload PDF, DOCX, TXT, or MD files of your own writing." });
+        return res.status(400).json({ error: pastedNotes
+          ? 'That note is a bit short to learn your voice from — paste a fuller sermon, teaching, or message (at least a few paragraphs).'
+          : "We couldn't read text from any of those files. Please upload PDF, DOCX, TXT, or MD files of your own writing." });
       }
 
       const anthropic = getAnthropic();
-      const booksBlock = excerpts.map((e, i) => `--- BOOK ${i + 1}: "${e.filename}" ---\n${e.text}`).join('\n\n');
+      const booksBlock = excerpts.map((e, i) => `--- SOURCE ${i + 1}: "${e.filename}" ---\n${e.text}`).join('\n\n');
       const authorName = req.user.name || 'the author';
 
-      const prompt = `You are a literary voice analyst. Below are excerpts from ${excerpts.length} book(s)/manuscript(s) written by ${authorName}. Study them closely and reverse-engineer this author's unique writing voice and ministry identity from real evidence — do not guess generically.
+      const prompt = `You are a literary voice analyst. Below are excerpts from ${excerpts.length} source(s) (books, manuscripts, sermon notes, or teaching transcripts) written or preached by ${authorName}. Study them closely and reverse-engineer this author's unique writing voice and ministry identity from real evidence — do not guess generically.
 
 ${booksBlock}
 
@@ -191,6 +213,76 @@ Return ONLY the JSON object — no explanation, no markdown code fences.`;
       const profile = JSON.parse(jsonMatch[0]);
 
       res.json({ profile, filesAnalyzed: excerpts.map(e => e.filename) });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+});
+
+// ─── VOICE FROM AUDIO TEACHING ───────────────────────────────────────
+// The author uploads a recording of a sermon or teaching they preached.
+// We transcribe it with Whisper, then reverse-engineer their voice
+// profile from the transcript the same way /voice-from-books does for
+// written excerpts. Like the other voice-building routes, this returns
+// a draft for the author to review/edit before anything is saved.
+router.post('/voice-from-audio', auth, (req, res) => {
+  audioUpload.single('audio')(req, res, async (multerErr) => {
+    if (multerErr) {
+      return res.status(400).json({ error: multerErr.message || 'Could not process that audio file.' });
+    }
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'Please upload an audio recording of a sermon or teaching.' });
+      }
+
+      let transcript;
+      try {
+        transcript = await transcribeAudioBuffer(req.file.buffer, req.file.originalname);
+      } catch (e) {
+        return res.status(503).json({ error: e.message });
+      }
+
+      const cleaned = (transcript || '').replace(/\s+/g, ' ').trim();
+      if (cleaned.length < 300) {
+        return res.status(400).json({ error: "We couldn't get enough spoken content from that recording. Please upload a clearer or longer teaching." });
+      }
+
+      const anthropic = getAnthropic();
+      const authorName = req.user.name || 'the author';
+      const excerptText = sampleExcerpt(cleaned, 9000);
+
+      const prompt = `You are a literary voice analyst. Below is a transcript of a sermon or teaching preached by ${authorName}. Study it closely and reverse-engineer this author's unique speaking/writing voice and ministry identity from real evidence — do not guess generically.
+
+--- TRANSCRIPT: "${req.file.originalname}" ---
+${excerptText}
+
+Return ONLY a JSON object with these exact string fields, based strictly on what you read above:
+{
+  "ministry": "Their ministry identity and calling, inferred from how they speak and what they emphasize",
+  "tone": "Their preaching/speaking tone (bold, pastoral, fiery, etc.) — be specific about the texture of their actual sentences",
+  "phrases": "3-6 signature phrases or expressions they actually repeat in this transcript, comma-separated, no quotation marks",
+  "scriptures": "3-5 scripture references they actually cite or allude to in this transcript, comma-separated",
+  "stories": "One defining personal story, testimony, or illustration found in this transcript, summarized in their own voice",
+  "audience": "Who they are clearly speaking to, based on the language and assumptions in the transcript",
+  "theology": "Their theological framework and convictions, as evidenced by the transcript",
+  "style": "Their speaking/writing style (poetic, academic, narrative, declarative, etc.)",
+  "sample_passage": "A 120-170 word passage you write yourself in their exact voice, suitable as an anchor sample for a new chapter opening — don't just copy text verbatim from the transcript"
+}
+
+Return ONLY the JSON object — no explanation, no markdown code fences.`;
+
+      const response = await anthropic.messages.create({
+        model: process.env.CLAUDE_MODEL || 'claude-opus-4-5',
+        max_tokens: 2048,
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      const text = response.content[0].text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) throw new Error('Could not analyze that recording right now. Please try again.');
+      const profile = JSON.parse(jsonMatch[0]);
+
+      res.json({ profile, filesAnalyzed: [req.file.originalname] });
     } catch (e) {
       res.status(500).json({ error: e.message });
     }

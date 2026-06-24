@@ -27,12 +27,17 @@ router.get('/', auth, (req, res) => {
 router.post('/', auth, (req, res) => {
   try {
     const { title, type, purpose, total_chapters, outline, cover_style } = req.body;
+    // total_chapters always tracks only the main numbered chapters —
+    // Introduction (0) and Conclusion (999) are additional, not part of this count.
+    const mainCount = (outline && Array.isArray(outline))
+      ? outline.filter(ch => ch.number !== 0 && ch.number !== 999).length
+      : (total_chapters || 10);
     const manuscript = db.manuscripts.create({
       user_id: req.user.id,
       title: title || 'Untitled',
       type: type || 'Teaching Book',
       purpose: purpose || '',
-      total_chapters: total_chapters || 10,
+      total_chapters: mainCount || total_chapters || 10,
       cover_style: cover_style || 'aurora',
       status: 'draft',
     });
@@ -173,7 +178,10 @@ router.post('/:id/generate-outline', auth, async (req, res) => {
       });
     });
 
-    db.manuscripts.update(manuscript.id, { total_chapters: outline.length });
+    // total_chapters tracks only the main numbered chapters — Introduction (0)
+    // and Conclusion (999) are additional and don't count toward this number.
+    const mainCount = outline.filter(ch => ch.number !== 0 && ch.number !== 999).length;
+    db.manuscripts.update(manuscript.id, { total_chapters: mainCount });
 
     const chapters = db.chapters.findAll({ manuscript_id: manuscript.id }).sort((a, b) => a.chapter_number - b.chapter_number);
     res.json({ chapters });
@@ -192,11 +200,16 @@ router.put('/:id/chapters/reorder', auth, (req, res) => {
     const { orderedIds } = req.body;
     if (!Array.isArray(orderedIds)) return res.status(400).json({ error: 'orderedIds must be an array' });
 
-    orderedIds.forEach((chapterId, i) => {
+    // Preserve the special Introduction (0) and Conclusion (999) slots —
+    // only renumber the main chapters in between.
+    let mainIdx = 1;
+    orderedIds.forEach((chapterId) => {
       const ch = db.chapters.findById(chapterId);
       if (ch && ch.manuscript_id === manuscript.id) {
-        // Preserve a special "0" intro slot if it was already numbered 0
-        const newNumber = ch.chapter_number === 0 ? 0 : i + 1;
+        let newNumber;
+        if (ch.chapter_number === 0) newNumber = 0;
+        else if (ch.chapter_number === 999) newNumber = 999;
+        else newNumber = mainIdx++;
         db.chapters.update(chapterId, { chapter_number: newNumber });
       }
     });
@@ -221,7 +234,7 @@ router.get('/:id/export', auth, (req, res) => {
   text += '\n';
 
   chapters.forEach(ch => {
-    const heading = ch.chapter_number === 0 ? ch.title : `Chapter ${ch.chapter_number}: ${ch.title}`;
+    const heading = (ch.chapter_number === 0 || ch.chapter_number === 999) ? ch.title : `Chapter ${ch.chapter_number}: ${ch.title}`;
     text += `${heading}\n${'-'.repeat(heading.length)}\n\n`;
     text += (ch.content && ch.content.trim()) ? `${ch.content.trim()}\n\n` : '[This chapter has not been written yet.]\n\n';
   });

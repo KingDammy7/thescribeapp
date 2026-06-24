@@ -1,18 +1,34 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Btn from '../components/Btn';
 import Icon from '../components/Icon';
 import CoverPreview from '../components/CoverPreview';
+import VoiceSourceOptions from '../components/VoiceSourceOptions';
 import useStore from '../store/useStore';
+import { friendlyError } from '../lib/api';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Dashboard() {
-  const { user, manuscripts, fetchManuscripts, manuscriptsLoading, voiceProfile, fetchVoiceProfile } = useStore();
+  useDocumentTitle('Dashboard');
+  const { user, manuscripts, fetchManuscripts, manuscriptsLoading, voiceProfile, fetchVoiceProfile, resendVerification, showToast } = useStore();
   const navigate = useNavigate();
+  const [resending, setResending] = useState(false);
 
   useEffect(() => {
     fetchManuscripts();
     if (!voiceProfile) fetchVoiceProfile();
   }, []);
+
+  const resendVerificationEmail = async () => {
+    setResending(true);
+    try {
+      await resendVerification();
+      showToast('Verification email sent — check your inbox.', 'success');
+    } catch (e) {
+      showToast(friendlyError(e.response?.data?.error || e.message), 'error');
+    }
+    setResending(false);
+  };
 
   const totalWords = manuscripts.reduce((s, m) => s + (m.total_words || 0), 0);
   const totalChaptersDone = manuscripts.reduce((s, m) => s + (m.chapters_done || 0), 0);
@@ -48,38 +64,40 @@ export default function Dashboard() {
     <div style={{ padding: '32px 28px', maxWidth: 1000, margin: '0 auto' }} className="page-enter">
       {/* Header */}
       <div style={{ marginBottom: 36 }}>
-        <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>
-          Good day, {user?.name?.split(' ')[0] || 'Author'} ✦
-        </div>
+        {user ? (
+          <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 4 }}>
+            Good day, {user.name?.split(' ')[0] || 'Author'} ✦
+          </div>
+        ) : (
+          <div className="skeleton-pulse" style={{ width: 130, height: 13, borderRadius: 4, marginBottom: 4, background: 'rgba(201,164,78,0.12)' }} />
+        )}
         <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 32, color: 'var(--cream)' }}>Dashboard</h1>
       </div>
+
+      {/* Email verification reminder */}
+      {user && user.verified === false && (
+        <div className="glass" style={{ borderRadius: 12, padding: '14px 18px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', border: '1px solid rgba(201,164,78,0.3)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Icon name="mail" size={16} style={{ color: 'var(--gold)' }} />
+            <span style={{ fontSize: 13, color: 'var(--cream-dim)' }}>Please verify your email address ({user.email}).</span>
+          </div>
+          <button onClick={resendVerificationEmail} disabled={resending}
+            style={{ fontSize: 12.5, color: 'var(--gold)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
+            {resending ? 'Sending...' : 'Resend Email'}
+          </button>
+        </div>
+      )}
 
       {/* Guided onboarding for brand-new users */}
       {isBrandNew ? (
         <div className="glass-bright" style={{ borderRadius: 18, padding: '36px 32px', marginBottom: 32 }}>
           <div className="tag tag-gold" style={{ marginBottom: 14 }}>Welcome to The Scribe</div>
           <h2 style={{ fontFamily: 'Playfair Display, serif', fontSize: 26, color: 'var(--cream)', marginBottom: 10 }}>Let's get you set up</h2>
-          <p style={{ color: 'var(--muted)', marginBottom: 28, maxWidth: 520, lineHeight: 1.6 }}>
-            Two quick steps before The Scribe can write in your voice.
+          <p style={{ color: 'var(--muted)', marginBottom: 22, maxWidth: 520, lineHeight: 1.6 }}>
+            Step 1: pick how you want to build your voice fingerprint. Step 2 (creating your first manuscript) unlocks once it's ready.
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 16 }}>
-            <div className="glass" style={{ borderRadius: 14, padding: 22, position: 'relative' }}>
-              <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700, marginBottom: 10 }}>STEP 1</div>
-              <Icon name="mic" size={26} style={{ color: 'var(--gold)', marginBottom: 12 }} />
-              <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 6 }}>Build your voice fingerprint</div>
-              <div style={{ fontSize: 13, color: 'var(--muted)', marginBottom: 16 }}>Answer 8 questions, or upload books you've already written and let the AI learn your voice from them.</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Btn size="sm" onClick={() => navigate('/interview')}><Icon name="arrowRight" size={12} />Start Interview</Btn>
-                <Btn size="sm" variant="ghost" onClick={() => navigate('/interview-from-books')}><Icon name="upload" size={12} />Upload My Books</Btn>
-              </div>
-            </div>
-            <div className="glass" style={{ borderRadius: 14, padding: 22, opacity: 0.6 }}>
-              <div style={{ fontSize: 11, color: 'var(--muted)', fontWeight: 700, marginBottom: 10 }}>STEP 2</div>
-              <Icon name="book" size={26} style={{ color: 'var(--muted)', marginBottom: 12 }} />
-              <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 6 }}>Create your first manuscript</div>
-              <div style={{ fontSize: 13, color: 'var(--muted)' }}>Unlocked once your voice profile is ready.</div>
-            </div>
-          </div>
+          <div style={{ fontSize: 11, color: 'var(--gold)', fontWeight: 700, marginBottom: 10 }}>STEP 1 — CHOOSE A METHOD</div>
+          <VoiceSourceOptions cardStyle />
         </div>
       ) : (
         <>
@@ -95,15 +113,12 @@ export default function Dashboard() {
 
           {/* Voice profile prompt */}
           {!voiceProfile && (
-            <div className="glass-bright" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 24, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 4 }}>Complete your Voice Interview</div>
-                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Set up your AI voice fingerprint to start generating manuscripts</div>
+            <div className="glass-bright" style={{ borderRadius: 14, padding: '20px 22px', marginBottom: 24 }}>
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontWeight: 600, color: 'var(--cream)', marginBottom: 4 }}>Build your Voice Fingerprint</div>
+                <div style={{ fontSize: 13, color: 'var(--muted)' }}>Pick a method to start generating manuscripts in your voice</div>
               </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Btn onClick={() => navigate('/interview')}><Icon name="mic" size={14} />Start Interview</Btn>
-                <Btn variant="ghost" onClick={() => navigate('/interview-from-books')}><Icon name="upload" size={14} />Upload My Books</Btn>
-              </div>
+              <VoiceSourceOptions cardStyle />
             </div>
           )}
 

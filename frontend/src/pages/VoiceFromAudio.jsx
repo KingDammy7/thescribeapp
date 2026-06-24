@@ -6,9 +6,7 @@ import Icon from '../components/Icon';
 import useStore from '../store/useStore';
 import api, { friendlyError } from '../lib/api';
 
-const ACCEPTED_EXT = ['.pdf', '.docx', '.txt', '.md'];
-const MAX_FILES = 10;
-const MIN_FILES = 1;
+const ACCEPTED_EXT = ['.mp3', '.wav', '.m4a', '.mp4', '.webm', '.ogg', '.aac'];
 
 const FIELD_LABELS = [
   { key: 'ministry', label: 'Ministry Identity' },
@@ -26,59 +24,45 @@ function extOf(filename) {
   return i === -1 ? '' : filename.slice(i).toLowerCase();
 }
 
-export default function VoiceFromBooks() {
-  // picking -> analyzing -> reviewing -> saving -> done | error
+export default function VoiceFromAudio() {
+  // picking -> analyzing -> reviewing -> saving -> error
   const [phase, setPhase] = useState('picking');
-  const [files, setFiles] = useState([]);
+  const [file, setFile] = useState(null);
   const [draft, setDraft] = useState(null);
-  const [filesAnalyzed, setFilesAnalyzed] = useState([]);
   const [error, setError] = useState('');
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const { saveVoiceInterview, updateVoiceProfile, showToast } = useStore();
 
-  const canAnalyze = files.length >= MIN_FILES;
-
-  const addFiles = (fileList) => {
-    const incoming = Array.from(fileList);
-    const valid = [];
-    const rejected = [];
-    for (const f of incoming) {
-      if (ACCEPTED_EXT.includes(extOf(f.name))) valid.push(f);
-      else rejected.push(f.name);
+  const pickFile = (fileList) => {
+    const f = fileList[0];
+    if (!f) return;
+    if (!ACCEPTED_EXT.includes(extOf(f.name))) {
+      setError(`We can't read "${f.name}" yet. Use MP3, WAV, M4A, MP4, WEBM, OGG, or AAC.`);
+      return;
     }
-    if (rejected.length) {
-      setError(`Skipped ${rejected.length === 1 ? 'file' : 'files'} we can't read yet (${rejected.join(', ')}). Use PDF, DOCX, TXT, or MD.`);
-    } else {
-      setError('');
-    }
-    setFiles(prev => {
-      const merged = [...prev, ...valid].slice(0, MAX_FILES);
-      return merged;
-    });
+    setError('');
+    setFile(f);
   };
-
-  const removeFile = (idx) => setFiles(prev => prev.filter((_, i) => i !== idx));
 
   const onDrop = (e) => {
     e.preventDefault();
     setDragOver(false);
-    if (e.dataTransfer.files?.length) addFiles(e.dataTransfer.files);
+    if (e.dataTransfer.files?.length) pickFile(e.dataTransfer.files);
   };
 
   const analyze = async () => {
-    if (!canAnalyze) return;
+    if (!file) return;
     setPhase('analyzing');
     setError('');
     try {
       const formData = new FormData();
-      files.forEach(f => formData.append('books', f));
-      const { data } = await api.post('/generate/voice-from-books', formData, {
+      formData.append('audio', file);
+      const { data } = await api.post('/generate/voice-from-audio', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setDraft(data.profile);
-      setFilesAnalyzed(data.filesAnalyzed || []);
       setPhase('reviewing');
     } catch (e) {
       setError(friendlyError(e.response?.data?.error || e.message));
@@ -94,7 +78,7 @@ export default function VoiceFromBooks() {
       const { sample_passage, ...interviewFields } = draft;
       await saveVoiceInterview(interviewFields);
       if (sample_passage) await updateVoiceProfile({ sample_passage });
-      showToast('Your voice profile was generated from your books.', 'success');
+      showToast('Your voice profile was generated from your audio teaching.', 'success');
       navigate('/voice-profile');
     } catch (e) {
       setError(friendlyError(e.response?.data?.error || e.message));
@@ -103,9 +87,8 @@ export default function VoiceFromBooks() {
   };
 
   const startOver = () => {
-    setFiles([]);
+    setFile(null);
     setDraft(null);
-    setFilesAnalyzed([]);
     setError('');
     setPhase('picking');
   };
@@ -127,12 +110,12 @@ export default function VoiceFromBooks() {
         </div>
 
         <div style={{ textAlign: 'center', marginBottom: 36 }}>
-          <div className="tag tag-gold" style={{ display: 'inline-flex', marginBottom: 14 }}>✦ Build From Your Own Writing</div>
+          <div className="tag tag-gold" style={{ display: 'inline-flex', marginBottom: 14 }}>✦ Build From a Recorded Teaching</div>
           <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 'clamp(26px,4vw,38px)', color: 'var(--cream)', marginBottom: 10 }}>
-            Upload your books. We'll learn your voice.
+            Upload a recording. We'll learn your voice.
           </h1>
           <p style={{ color: 'var(--muted)', fontSize: 14.5, maxWidth: 560, margin: '0 auto' }}>
-            Upload 1–10 books or manuscripts you've written. The Scribe studies your real words and builds your full voice fingerprint from them — then you review and edit every field before anything is saved.
+            Upload a recording of a sermon or teaching you preached. The Scribe transcribes it, studies your real words, and builds your full voice fingerprint from them — then you review and edit every field before anything is saved.
           </p>
         </div>
 
@@ -155,37 +138,34 @@ export default function VoiceFromBooks() {
               <input
                 ref={inputRef}
                 type="file"
-                multiple
                 accept={ACCEPTED_EXT.join(',')}
-                onChange={e => { if (e.target.files?.length) addFiles(e.target.files); e.target.value = ''; }}
+                onChange={e => { if (e.target.files?.length) pickFile(e.target.files); e.target.value = ''; }}
                 style={{ display: 'none' }}
               />
-              <Icon name="upload" size={32} style={{ color: 'var(--gold)', marginBottom: 14 }} />
-              <div style={{ color: 'var(--cream)', fontWeight: 600, marginBottom: 6 }}>Drop files here or click to browse</div>
-              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>PDF, DOCX, TXT, or MD · up to {MAX_FILES} files</div>
+              <Icon name="headphones" size={32} style={{ color: 'var(--gold)', marginBottom: 14 }} />
+              <div style={{ color: 'var(--cream)', fontWeight: 600, marginBottom: 6 }}>Drop a recording here or click to browse</div>
+              <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>MP3, WAV, M4A, MP4, WEBM, OGG, or AAC · up to 60MB</div>
             </div>
 
             {error && (
               <div style={{ marginTop: 14, fontSize: 12.5, color: '#fca5a5', textAlign: 'center' }}>{error}</div>
             )}
 
-            {files.length > 0 && (
-              <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {files.map((f, i) => (
-                  <div key={i} className="glass" style={{ borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <Icon name="file" size={15} style={{ color: 'var(--gold)', flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: 'var(--cream-dim)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
-                    <button onClick={() => removeFile(i)} aria-label={`Remove ${f.name}`} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
-                      <Icon name="x" size={14} />
-                    </button>
-                  </div>
-                ))}
+            {file && (
+              <div style={{ marginTop: 20 }}>
+                <div className="glass" style={{ borderRadius: 10, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Icon name="headphones" size={15} style={{ color: 'var(--gold)', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, color: 'var(--cream-dim)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
+                  <button onClick={() => setFile(null)} aria-label={`Remove ${file.name}`} style={{ background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
+                    <Icon name="x" size={14} />
+                  </button>
+                </div>
               </div>
             )}
 
             <div style={{ textAlign: 'center', marginTop: 28 }}>
-              <Btn size="lg" disabled={!canAnalyze} onClick={analyze}>
-                <Icon name="wand" size={16} /> Analyze {files.length > 0 ? `${files.length} File${files.length > 1 ? 's' : ''}` : 'My Voice'}
+              <Btn size="lg" disabled={!file} onClick={analyze}>
+                <Icon name="wand" size={16} /> Transcribe & Analyze
               </Btn>
             </div>
           </>
@@ -196,7 +176,7 @@ export default function VoiceFromBooks() {
           <div className="glass" style={{ borderRadius: 20, padding: '48px', textAlign: 'center' }}>
             <div className="spin" style={{ width: 56, height: 56, borderRadius: '50%', border: '3px solid var(--border-bright)', borderTopColor: 'var(--gold)', margin: '0 auto' }} />
             <p style={{ marginTop: 20, color: 'var(--muted)', fontSize: 14 }}>
-              Reading {files.length} file{files.length > 1 ? 's' : ''} and studying your voice — this can take a minute for longer books...
+              Transcribing your recording and studying your voice — this can take a minute or two for longer audio...
             </p>
           </div>
         )}
@@ -204,11 +184,6 @@ export default function VoiceFromBooks() {
         {/* Reviewing / Saving phase */}
         {(phase === 'reviewing' || phase === 'saving') && draft && (
           <div>
-            {filesAnalyzed.length > 0 && (
-              <div style={{ fontSize: 12, color: 'var(--muted)', textAlign: 'center', marginBottom: 18 }}>
-                Learned from: {filesAnalyzed.join(', ')}
-              </div>
-            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {FIELD_LABELS.map(({ key, label }) => (
                 <div key={key} className="glass" style={{ borderRadius: 14, padding: '18px 20px' }}>
@@ -253,7 +228,7 @@ export default function VoiceFromBooks() {
         {phase === 'error' && (
           <div className="glass" style={{ borderRadius: 16, padding: '32px', textAlign: 'center', border: '1px solid rgba(239,68,68,0.3)' }}>
             <Icon name="alertCircle" size={36} style={{ color: '#fca5a5', marginBottom: 12 }} />
-            <p style={{ color: '#fca5a5', marginBottom: 8 }}>We couldn't generate a voice profile from those files.</p>
+            <p style={{ color: '#fca5a5', marginBottom: 8 }}>We couldn't generate a voice profile from that recording.</p>
             <p style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 20 }}>{error || 'Please try again, or use the manual interview instead.'}</p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
               <Btn onClick={startOver}><Icon name="refresh" size={14} /> Try Again</Btn>

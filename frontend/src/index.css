@@ -255,6 +255,10 @@ body {
 }
 .pulse-gold { animation: pulse-glow 2s infinite; }
 
+/* Skeleton loading placeholder */
+@keyframes skeleton-fade { 0%, 100% { opacity: 0.5; } 50% { opacity: 1; } }
+.skeleton-pulse { animation: skeleton-fade 1.4s ease-in-out infinite; }
+
 /* Notif dot */
 .notif-dot {
   width: 7px;
@@ -335,6 +339,35 @@ body {
     flex-wrap: wrap;
     justify-content: center;
     row-gap: 10px;
+  }
+}
+
+@media (max-width: 600px) {
+  .landing-sample-card {
+    margin-top: 28px !important;
+  }
+}
+
+/* Scrollable filter chip strip (e.g. Manuscripts status tabs) */
+.filter-chip-scroll {
+  scrollbar-width: none;
+}
+.filter-chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+.filter-chip-fade {
+  display: none;
+}
+@media (max-width: 480px) {
+  .filter-chip-fade {
+    display: block;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 28px;
+    background: linear-gradient(to right, transparent, var(--navy-900));
+    pointer-events: none;
   }
 }
 

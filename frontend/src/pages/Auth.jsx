@@ -2,14 +2,18 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
+import Icon from '../components/Icon';
 import useStore from '../store/useStore';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 export default function Auth() {
   const [params] = useSearchParams();
   const [mode, setMode] = useState(params.get('mode') === 'signup' ? 'signup' : 'signin');
+  useDocumentTitle(mode === 'signin' ? 'Sign In' : 'Create Account');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { login, register, authLoading, user } = useStore();
   const navigate = useNavigate();
@@ -61,9 +65,20 @@ export default function Auth() {
                 className="input-gold" style={{ padding: '11px 14px', borderRadius: 8, fontSize: 14 }} />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--cream-dim)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
-                className="input-gold" style={{ padding: '11px 14px', borderRadius: 8, fontSize: 14 }} />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: 'var(--cream-dim)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Password</label>
+                {mode === 'signin' && (
+                  <Link to="/forgot-password" style={{ fontSize: 12, color: 'var(--gold)', textDecoration: 'none' }}>Forgot password?</Link>
+                )}
+              </div>
+              <div style={{ position: 'relative' }}>
+                <input type={showPassword ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required minLength={6}
+                  className="input-gold" style={{ padding: '11px 44px 11px 14px', borderRadius: 8, fontSize: 14, width: '100%' }} />
+                <button type="button" onClick={() => setShowPassword(s => !s)} aria-label={showPassword ? 'Hide password' : 'Show password'} title={showPassword ? 'Hide password' : 'Show password'}
+                  style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--muted)', cursor: 'pointer', display: 'flex' }}>
+                  <Icon name={showPassword ? 'eyeOff' : 'eye'} size={16} />
+                </button>
+              </div>
             </div>
 
             {error && (
