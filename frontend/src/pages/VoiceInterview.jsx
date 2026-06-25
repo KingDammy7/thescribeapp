@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
 import Btn from '../components/Btn';
 import Icon from '../components/Icon';
 import useStore from '../store/useStore';
 import useSpeechToText from '../hooks/useSpeechToText';
+import useDocumentTitle from '../hooks/useDocumentTitle';
 
 const questions = [
   {
@@ -91,12 +92,14 @@ function wordCountOf(text) {
 }
 
 export default function VoiceInterview() {
+  useDocumentTitle('Voice Interview');
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   const [current, setCurrent] = useState('');
   const [saving, setSaving] = useState(false);
   const [exiting, setExiting] = useState(false);
-  const { saveVoiceInterview, showToast } = useStore();
+  const [resuming, setResuming] = useState(true);
+  const { saveVoiceInterview, showToast, voiceProfile, fetchVoiceProfile } = useStore();
   const navigate = useNavigate();
 
   const speech = useSpeechToText({
@@ -105,6 +108,27 @@ export default function VoiceInterview() {
       setCurrent(prev => (prev.trim() ? `${prev.trim()} ${chunk}` : chunk));
     },
   });
+
+  // Resume a previously saved partial (Save & Exit) interview: pull whatever
+  // answers already exist on the voice profile and jump to the first
+  // unanswered question, instead of always restarting from question 1.
+  useEffect(() => {
+    (async () => {
+      const profile = voiceProfile || await fetchVoiceProfile();
+      const restored = {};
+      if (profile) {
+        questions.forEach(qq => { if (profile[qq.id]) restored[qq.id] = profile[qq.id]; });
+      }
+      if (Object.keys(restored).length > 0) {
+        setAnswers(restored);
+        const firstUnanswered = questions.findIndex(qq => !restored[qq.id]);
+        const resumeStep = firstUnanswered === -1 ? questions.length - 1 : firstUnanswered;
+        setStep(resumeStep);
+        setCurrent(restored[questions[resumeStep].id] || '');
+      }
+      setResuming(false);
+    })();
+  }, []);
 
   const q = questions[step];
   const progress = (step / questions.length) * 100;
@@ -156,6 +180,12 @@ export default function VoiceInterview() {
       showToast('Could not save your progress. Please try again.', 'error');
     }
   };
+
+  if (resuming) return (
+    <div className="bg-hero" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div className="spin" style={{ width: 28, height: 28, borderRadius: '50%', border: '2px solid var(--border-bright)', borderTopColor: 'var(--gold)' }} />
+    </div>
+  );
 
   return (
     <div className="bg-hero" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', padding: 24 }}>

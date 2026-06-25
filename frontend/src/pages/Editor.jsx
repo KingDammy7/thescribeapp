@@ -24,7 +24,7 @@ export default function Editor() {
   const [aiPanel, setAiPanel] = useState(true);
   const [aiInput, setAiInput] = useState('');
   const [aiMessages, setAiMessages] = useState([
-    { role: 'assistant', text: "I'm The Scribe, your AI ghostwriter. I'll write in your exact voice. Ask me to write, expand, add scripture, or rewrite anything." }
+    { role: 'assistant', text: "I'm The Scribe, your AI ghostwriter. I'll write in your exact voice. Ask me to write, expand, add scripture, or rewrite anything.", welcome: true }
   ]);
   const [aiTyping, setAiTyping] = useState(false);
   const [streamingReply, setStreamingReply] = useState('');
@@ -91,7 +91,11 @@ export default function Editor() {
   // activeChapters.length — that array can briefly hold stale data from a
   // previously viewed manuscript while this one is still loading, which made the
   // goal flicker between two different values on reload.
-  const manuscriptGoal = (activeManuscript?.total_chapters || 10) * WORDS_PER_CHAPTER_GOAL;
+  // +2 accounts for the Introduction and Conclusion, which every outline
+  // generates on top of total_chapters (see the chapter-numbering sentinel
+  // convention: 0 = Intro, 999 = Conclusion) — both still need real word
+  // count, so the goal should reflect them rather than only the main chapters.
+  const manuscriptGoal = ((activeManuscript?.total_chapters || 10) + 2) * WORDS_PER_CHAPTER_GOAL;
 
   const autoSave = useCallback(async (text, chapter) => {
     if (!chapter) return;
@@ -109,6 +113,38 @@ export default function Editor() {
     setContent(text);
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => autoSave(text, selectedChapter), 1500);
+  };
+
+  // The writing area is a raw contentEditable, so the browser already keeps a
+  // native undo/redo history for it as the author types — Ctrl/Cmd+Z works.
+  // There just wasn't a visible button surfacing that. execCommand is
+  // deprecated but still the only way to drive the browser's own
+  // contentEditable undo stack; we resync our `content` state afterward
+  // since execCommand doesn't always reliably fire a React input event.
+  const undo = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand('undo');
+    handleContentChange(editorRef.current.innerText);
+  };
+  const redo = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand('redo');
+    handleContentChange(editorRef.current.innerText);
+  };
+
+  // Insert an AI chat reply directly into the chapter, mirroring what the
+  // quick-action chips effectively do — so freeform chat answers don't
+  // require manual copy/paste out of the panel.
+  const insertReply = (text) => {
+    if (!selectedChapter) { showToast('Select a chapter first.', 'error'); return; }
+    const updated = content ? `${content}\n\n${text}` : text;
+    setContent(updated);
+    if (editorRef.current) editorRef.current.innerHTML = updated.replace(/\n/g, '<br/>');
+    clearTimeout(saveTimer.current);
+    autoSave(updated, selectedChapter);
+    showToast('Inserted into chapter.', 'success');
   };
 
   // Sync the contentEditable DOM only when switching to a (different) chapter.
@@ -323,6 +359,14 @@ export default function Editor() {
               {saved && <span style={{ fontSize: 11, color: '#6ee7b7' }}>✓ Saved</span>}
             </div>
             <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button onClick={undo} disabled={!selectedChapter} title="Undo (Ctrl/⌘+Z)" aria-label="Undo"
+                style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border-bright)', background: 'transparent', color: 'var(--muted)', cursor: selectedChapter ? 'pointer' : 'default', opacity: selectedChapter ? 1 : 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="undo" size={14} />
+              </button>
+              <button onClick={redo} disabled={!selectedChapter} title="Redo (Ctrl/⌘+Shift+Z)" aria-label="Redo"
+                style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid var(--border-bright)', background: 'transparent', color: 'var(--muted)', cursor: selectedChapter ? 'pointer' : 'default', opacity: selectedChapter ? 1 : 0.4, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Icon name="redo" size={14} />
+              </button>
               <button onClick={handleExport} title="Export manuscript"
                 style={{ padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border-bright)', background: 'transparent', color: 'var(--muted)', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <Icon name="download" size={13} /> Export
@@ -405,7 +449,7 @@ export default function Editor() {
             {/* Chat messages */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
               {aiMessages.map((msg, i) => (
-                <div key={i} style={{ display: 'flex', justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start' }}>
                   <div style={{
                     maxWidth: '90%', padding: '9px 12px',
                     borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
@@ -415,6 +459,12 @@ export default function Editor() {
                   }}>
                     {msg.text}
                   </div>
+                  {msg.role === 'assistant' && !msg.welcome && (
+                    <button onClick={() => insertReply(msg.text)} title="Insert into chapter"
+                      style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 4, padding: '3px 8px', borderRadius: 10, fontSize: 10.5, fontWeight: 600, border: '1px solid var(--border-bright)', background: 'transparent', color: 'var(--gold-light)', cursor: 'pointer' }}>
+                      <Icon name="plus" size={10} /> Insert into chapter
+                    </button>
+                  )}
                 </div>
               ))}
               {aiTyping && streamingReply && (

@@ -18,6 +18,7 @@ import VoiceFromNotes from './pages/VoiceFromNotes';
 import VoiceFromAudio from './pages/VoiceFromAudio';
 import VoicePreview from './pages/VoicePreview';
 import { PrivacyPolicy, TermsOfService } from './pages/Legal';
+import NotFound from './pages/NotFound';
 
 // App pages (require auth)
 import Dashboard from './pages/Dashboard';
@@ -88,7 +89,7 @@ export default function App() {
         <Route path="/generate/:id" element={<RequireAuth><GenerationMode /></RequireAuth>} />
 
         {/* Fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );

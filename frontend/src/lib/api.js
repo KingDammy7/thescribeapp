@@ -14,11 +14,19 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Handle 401 — token expired
+// Handle 401 — token expired.
+// Auth endpoints (login/register/etc.) also return 401 for plain "wrong
+// password" cases — those aren't an expired-session situation, so we must
+// NOT force a hard redirect there. Doing so wiped the form and the error
+// message before the page even had a chance to render it.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password', '/auth/verify-email'];
+
 api.interceptors.response.use(
   res => res,
   err => {
-    if (err.response?.status === 401) {
+    const url = err.config?.url || '';
+    const isAuthEndpoint = AUTH_ENDPOINTS.some(p => url.includes(p));
+    if (err.response?.status === 401 && !isAuthEndpoint) {
       localStorage.removeItem('scribe_token');
       window.location.href = '/auth';
     }
